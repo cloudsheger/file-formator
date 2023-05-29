@@ -43,11 +43,16 @@ rename_files_in_directory() {
       # Check if the file needs to be updated
       if [[ $file != $new_file_name ]]; then
         # Rename the file
-        git mv "$file" "$new_file_name"
-
-        # Increment the updated file count
-        ((updated_file_count++))
+        if ! git mv "$file" "$new_file_name" 2>/dev/null; then
+          echo -e "${YELLOW}Not qualified to update: $file${RESET}"
+        else
+          # Increment the updated file count
+          ((updated_file_count++))
+        fi
       fi
+    else
+      # Display a message for files not qualified for updating
+      echo -e "${YELLOW}Not qualified to update: $file${RESET}"
     fi
   done
 
@@ -71,6 +76,11 @@ process_branches() {
 
     # Rename files in the root directory
     rename_files_in_directory "."
+
+    # Find and rename files in subdirectories
+    find . -type d -not -path './.git/*' -print0 | while IFS= read -r -d '' directory; do
+      rename_files_in_directory "$directory"
+    done
 
     # Commit the changes
     git commit -m "Convert file names for branch $branch"
